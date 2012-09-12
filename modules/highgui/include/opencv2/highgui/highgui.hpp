@@ -216,6 +216,7 @@ public:
     CV_WRAP virtual bool read(CV_OUT Mat& image);
     
     CV_WRAP virtual bool set(int propId, double value);
+    CV_WRAP virtual bool setFlags(int propId, double value, long flags, bool useDefault = true);
     CV_WRAP virtual double get(int propId);
     
 protected:

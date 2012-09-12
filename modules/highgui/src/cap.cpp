@@ -98,6 +98,11 @@ CV_IMPL int cvSetCaptureProperty( CvCapture* capture, int id, double value )
     return capture ? capture->setProperty(id, value) : 0;
 }
 
+CV_IMPL int cvSetCapturePropertyFlags( CvCapture* capture, int id, double value , long flags, bool useDefault)
+{
+    return capture ? capture->setPropertyFlags(id, value, flags, useDefault) : 0;
+}
+
 CV_IMPL int cvGetCaptureDomain( CvCapture* capture)
 {
     return capture ? capture->getCaptureDomain() : 0;
@@ -506,6 +511,11 @@ VideoCapture& VideoCapture::operator >> (Mat& image)
 bool VideoCapture::set(int propId, double value)
 {
     return cvSetCaptureProperty(cap, propId, value) != 0;
+}
+
+bool VideoCapture::setFlags(int propId, double value, long flags, bool useDefault)
+{
+    return cvSetCapturePropertyFlags(cap, propId, value, flags, useDefault) != 0;
 }
 
 double VideoCapture::get(int propId)
