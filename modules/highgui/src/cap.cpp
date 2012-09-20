@@ -88,6 +88,11 @@ CV_IMPL IplImage* cvRetrieveFrame( CvCapture* capture, int idx )
     return capture ? capture->retrieveFrame(idx) : 0;
 }
 
+CV_IMPL int cvGetDeviceLists( CvCapture* capture, char **deviceList )
+{
+    return capture ? capture->getDeviceList(deviceList) : 0;
+}
+
 CV_IMPL double cvGetCaptureProperty( CvCapture* capture, int id )
 {
     return capture ? capture->getProperty(id) : 0;
@@ -516,6 +521,11 @@ bool VideoCapture::set(int propId, double value)
 bool VideoCapture::setFlags(int propId, double value, long flags, bool useDefault)
 {
     return cvSetCapturePropertyFlags(cap, propId, value, flags, useDefault) != 0;
+}
+
+int VideoCapture::listDevices(char **&deviceList)
+{
+    return cvGetDeviceLists(cap, deviceList);
 }
 
 double VideoCapture::get(int propId)

@@ -214,6 +214,7 @@ public:
     CV_WRAP virtual bool retrieve(CV_OUT Mat& image, int channel=0);
     virtual VideoCapture& operator >> (CV_OUT Mat& image);
     CV_WRAP virtual bool read(CV_OUT Mat& image);
+    CV_WRAP virtual int listDevices(char **&listDevices);
     
     CV_WRAP virtual bool set(int propId, double value);
     CV_WRAP virtual bool setFlags(int propId, double value, long flags, bool useDefault = true);
