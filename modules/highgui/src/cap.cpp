@@ -88,7 +88,7 @@ CV_IMPL IplImage* cvRetrieveFrame( CvCapture* capture, int idx )
     return capture ? capture->retrieveFrame(idx) : 0;
 }
 
-CV_IMPL int cvGetDeviceLists( CvCapture* capture, char **deviceList )
+CV_IMPL int cvGetDeviceLists( CvCapture* capture, char **&deviceList )
 {
     return capture ? capture->getDeviceList(deviceList) : 0;
 }

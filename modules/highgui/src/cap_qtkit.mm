@@ -101,6 +101,8 @@ public:
 	virtual IplImage* retrieveFrame(int);
 	virtual double getProperty(int property_id); 
 	virtual bool setProperty(int property_id, double value); 
+	virtual bool setPropertyFlags(int property_id, double value, long flags, bool useDefault); 
+	virtual int getDeviceList(char **&deviceList);
 	virtual int didStart(); 
 	
 	
@@ -310,6 +312,37 @@ void CvCaptureCAM::stopCaptureDevice() {
 	
 }
 
+
+int CvCaptureCAM::getDeviceList(char **&deviceList)
+{
+    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
+    QTCaptureDevice *device; 
+    NSArray* devices = [[[QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeVideo]
+			    arrayByAddingObjectsFromArray:[QTCaptureDevice inputDevicesWithMediaType:QTMediaTypeMuxed]] retain];
+    
+    int numCameras = [devices count];
+    if (numCameras == 0) {
+	cout << "QTKit didn't find any attached Video Input Devices!" << endl; 
+	[localpool drain]; 
+	return 0; 
+    }
+    else
+    {
+        deviceList = new char *[numCameras];
+        int i = numCameras;
+        while (i-- > 0)
+        {
+            cout << i << endl;
+            device = [devices objectAtIndex:i] ;
+	    // cout << "DEVICE UNIQUE ID" << endl;
+            // cout << [[device uniqueID] UTF8String] << endl;
+            cout << [[device localizedDisplayName] UTF8String] << endl;
+            deviceList[i] = strdup([[device localizedDisplayName] UTF8String]);
+        }
+    }
+    return numCameras;
+}
+
 int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 	NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 	
@@ -463,6 +496,9 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
 	} 
 }
 
+bool CvCaptureCAM::setPropertyFlags(int property_id, double value, long flags, bool useDefault) {
+    return true;
+}
 
 /*****************************************************************************
  *
