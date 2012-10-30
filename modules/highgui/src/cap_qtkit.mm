@@ -33,6 +33,8 @@
 #include <iostream>
 #import <QTKit/QTKit.h>
 
+#import "UVCCameraControl.mm"
+
 using namespace std; 
 
 /********************** Declaration of class headers ************************/
@@ -111,6 +113,7 @@ private:
 	QTCaptureDeviceInput        *mCaptureDeviceInput;
 	QTCaptureDecompressedVideoOutput    *mCaptureDecompressedVideoOutput;
 	CaptureDelegate* capture; 
+        UVCCameraControl *cameraControl;
 	
 	int startCaptureDevice(int cameraNum); 
 	void stopCaptureDevice(); 
@@ -300,7 +303,8 @@ void CvCaptureCAM::stopCaptureDevice() {
 	[mCaptureSession stopRunning];
 	
 	QTCaptureDevice *device = [mCaptureDeviceInput device];
-    if ([device isOpen])  [device close];
+        [cameraControl release];
+        if ([device isOpen])  [device close];
 	
 	[mCaptureSession release];
     [mCaptureDeviceInput release];
@@ -371,43 +375,46 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 	
     if (device) {
 		
-		success = [device open:&error];
+        success = [device open:&error];
         if (!success) {
-			cout << "QTKit failed to open a Video Capture Device" << endl; 			
-			[localpool drain]; 
-			return 0; 
+            cout << "QTKit failed to open a Video Capture Device" << endl; 			
+            [localpool drain]; 
+            return 0; 
         }
 		
-		mCaptureDeviceInput = [[QTCaptureDeviceInput alloc] initWithDevice:device] ;
-		mCaptureSession = [[QTCaptureSession alloc] init] ;
+        mCaptureDeviceInput = [[QTCaptureDeviceInput alloc] initWithDevice:device] ;
+        mCaptureSession = [[QTCaptureSession alloc] init] ;
 		
         success = [mCaptureSession addInput:mCaptureDeviceInput error:&error];		
 		
-		if (!success) {
-			cout << "QTKit failed to start capture session with opened Capture Device" << endl;
-			[localpool drain]; 
-			return 0; 
+        if (!success) {
+            cout << "QTKit failed to start capture session with opened Capture Device" << endl;
+            [localpool drain]; 
+            return 0; 
         }
-		
-		
-		mCaptureDecompressedVideoOutput = [[QTCaptureDecompressedVideoOutput alloc] init];
-		[mCaptureDecompressedVideoOutput setDelegate:capture]; 
-		NSDictionary *pixelBufferOptions ;
-		if (width > 0 && height > 0) {
-			pixelBufferOptions = [NSDictionary dictionaryWithObjectsAndKeys:
-								  [NSNumber numberWithDouble:1.0*width], (id)kCVPixelBufferWidthKey,
-								  [NSNumber numberWithDouble:1.0*height], (id)kCVPixelBufferHeightKey,
-								  //[NSNumber numberWithUnsignedInt:k32BGRAPixelFormat], (id)kCVPixelBufferPixelFormatTypeKey,
-								  [NSNumber numberWithUnsignedInt:kCVPixelFormatType_32BGRA],
-								  (id)kCVPixelBufferPixelFormatTypeKey,
-								  nil]; 
-		} else {
-			pixelBufferOptions = [NSDictionary dictionaryWithObjectsAndKeys:
-								  [NSNumber numberWithUnsignedInt:kCVPixelFormatType_32BGRA], 
-								  (id)kCVPixelBufferPixelFormatTypeKey,
-								  nil]; 
-		}
-		[mCaptureDecompressedVideoOutput setPixelBufferAttributes:pixelBufferOptions]; 
+
+        UInt32 locationID = 0;
+        sscanf([[device uniqueID] UTF8String], "0x%8x", (unsigned int *)&locationID);
+        cameraControl = [[UVCCameraControl alloc] initWithLocationID:locationID];
+
+        mCaptureDecompressedVideoOutput = [[QTCaptureDecompressedVideoOutput alloc] init];
+        [mCaptureDecompressedVideoOutput setDelegate:capture];
+        NSDictionary *pixelBufferOptions ;
+        if (width > 0 && height > 0) {
+            pixelBufferOptions = [NSDictionary dictionaryWithObjectsAndKeys:
+                                  [NSNumber numberWithDouble:1.0*width], (id)kCVPixelBufferWidthKey,
+                                  [NSNumber numberWithDouble:1.0*height], (id)kCVPixelBufferHeightKey,
+                                  //[NSNumber numberWithUnsignedInt:k32BGRAPixelFormat], (id)kCVPixelBufferPixelFormatTypeKey,
+                                  [NSNumber numberWithUnsignedInt:kCVPixelFormatType_32BGRA],
+                                  (id)kCVPixelBufferPixelFormatTypeKey,
+                                  nil];
+        } else {
+            pixelBufferOptions = [NSDictionary dictionaryWithObjectsAndKeys:
+                                  [NSNumber numberWithUnsignedInt:kCVPixelFormatType_32BGRA],
+                                  (id)kCVPixelBufferPixelFormatTypeKey,
+                                  nil];
+        }
+        [mCaptureDecompressedVideoOutput setPixelBufferAttributes:pixelBufferOptions]; 
 		
 #if QTKIT_VERSION_MAX_ALLOWED >= QTKIT_VERSION_7_6_3
 		[mCaptureDecompressedVideoOutput setAutomaticallyDropsLateVideoFrames:YES]; 
@@ -448,52 +455,67 @@ void CvCaptureCAM::setWidthHeight() {
 
 
 double CvCaptureCAM::getProperty(int property_id){
-	NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init]; 
-	
-	NSArray* connections = [mCaptureDeviceInput	connections]; 
-	QTFormatDescription* format = [[connections objectAtIndex:0] formatDescription]; 
-	NSSize s1 = [[format attributeForKey:QTFormatDescriptionVideoCleanApertureDisplaySizeAttribute] sizeValue]; 
-	
-	int width=s1.width, height=s1.height; 
-	switch (property_id) {
-		case CV_CAP_PROP_FRAME_WIDTH:
-			return width;
-		case CV_CAP_PROP_FRAME_HEIGHT: 
-			return height; 
-		default:
-			return 0; 
-	}
-	
-	[localpool drain]; 
-	
+    NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
+
+    NSArray* connections = [mCaptureDeviceInput	connections];
+    QTFormatDescription* format = [[connections objectAtIndex:0] formatDescription];
+    NSSize s1 = [[format attributeForKey:QTFormatDescriptionVideoCleanApertureDisplaySizeAttribute] sizeValue];
+
+    int width=s1.width, height=s1.height;
+    switch (property_id) {
+        case CV_CAP_PROP_FRAME_WIDTH:
+            return width;
+        case CV_CAP_PROP_FRAME_HEIGHT:
+            return height;
+        case CV_CAP_PROP_AUTO_EXPOSURE:
+            return [cameraControl getAutoExposure];
+        case CV_CAP_PROP_EXPOSURE:
+            return [cameraControl getExposure];
+        case CV_CAP_PROP_AUTO_FOCUS:
+            return [cameraControl getAutoFocus];
+        case CV_CAP_PROP_FOCUS:
+            return [cameraControl getFocus];
+        default:
+            return 0;
+    }
+
+    [localpool drain];
+
 }
 
 bool CvCaptureCAM::setProperty(int property_id, double value) {
-	switch (property_id) {
-		case CV_CAP_PROP_FRAME_WIDTH:
-			width = value;
-			settingWidth = 1; 
-			if (settingWidth && settingHeight) {
-				setWidthHeight(); 
-				settingWidth =0; 
-				settingHeight = 0; 
-			}
-			return true;
-		case CV_CAP_PROP_FRAME_HEIGHT:
-			height = value;
-			settingHeight = 1; 
-			if (settingWidth && settingHeight) {
-				setWidthHeight(); 
-				settingWidth =0; 
-				settingHeight = 0; 
-			}
-			return true;
-		case DISABLE_AUTO_RESTART:
-			disableAutoRestart = value;
-			return 1;
-		default:
-			return false;
-	} 
+    switch (property_id) {
+    case CV_CAP_PROP_FRAME_WIDTH:
+        width = value;
+        settingWidth = 1; 
+        if (settingWidth && settingHeight) {
+            setWidthHeight(); 
+            settingWidth =0; 
+            settingHeight = 0; 
+        }
+        return true;
+    case CV_CAP_PROP_FRAME_HEIGHT:
+        height = value;
+        settingHeight = 1; 
+        if (settingWidth && settingHeight) {
+            setWidthHeight(); 
+            settingWidth =0; 
+            settingHeight = 0; 
+        }
+        return true;
+    case CV_CAP_PROP_AUTO_EXPOSURE:
+        return [cameraControl setAutoExposure: value ? TRUE : FALSE];
+    case CV_CAP_PROP_EXPOSURE:
+        return [cameraControl setExposure: value];
+    case CV_CAP_PROP_AUTO_FOCUS:
+        return [cameraControl setAutoFocus: value];
+    case CV_CAP_PROP_FOCUS:
+        return [cameraControl setFocus: value];		case DISABLE_AUTO_RESTART:
+        disableAutoRestart = value;
+        return 1;
+    default:
+        return false;
+    } 
 }
 
 bool CvCaptureCAM::setPropertyFlags(int property_id, double value, long flags, bool useDefault) {
