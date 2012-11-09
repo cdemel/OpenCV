@@ -508,9 +508,10 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
     case CV_CAP_PROP_EXPOSURE:
         return [cameraControl setExposure: value];
     case CV_CAP_PROP_AUTO_FOCUS:
-        return [cameraControl setAutoFocus: value];
+        return [cameraControl setAutoFocus: value ? TRUE : FALSE];
     case CV_CAP_PROP_FOCUS:
-        return [cameraControl setFocus: value];		case DISABLE_AUTO_RESTART:
+        return [cameraControl setFocus: value];		
+    case DISABLE_AUTO_RESTART:
         disableAutoRestart = value;
         return 1;
     default:
